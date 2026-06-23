@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anthropic API Usage &amp; Cost Calculator — Revenue &amp; Analytics</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a212b;
+    --panel-2: #222c38;
+    --ink: #e8edf2;
+    --muted: #9aa7b4;
+    --line: #2e3a47;
+    --accent: #d98b5f;        /* terracotta */
+    --accent-2: #6fae8f;      /* calm green */
+    --accent-3: #6f9bd1;      /* steady blue */
+    --warn: #e0b341;
+    --danger: #d96f6f;
+    --radius: 12px;
+    --shadow: 0 8px 24px rgba(0,0,0,0.28);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: linear-gradient(180deg, #0f1419 0%, #131a22 100%);
+    color: var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.hero { margin-bottom: 28px; }
+  .eyebrow {
+    display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin-bottom: 8px;
+  }
+  h1 { font-size: 30px; margin: 0 0 8px; font-weight: 700; }
+  .sub { color: var(--muted); max-width: 760px; font-size: 15px; }
+
+  .baa {
+    margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line);
+    border-left: 4px solid var(--accent-2); background: var(--panel);
+    border-radius: 10px; font-size: 13.5px; color: var(--muted);
+  }
+  .baa strong { color: var(--ink); }
+
+  .layout { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; margin-top: 28px; }
+  @media (max-width: 920px){ .layout { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+  }
+  .card h2 { font-size: 16px; margin: 0 0 4px; }
+  .card .hint { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+
+  .section-label {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); font-weight: 700; margin: 22px 0 10px;
+  }
+  .section-label:first-of-type { margin-top: 4px; }
+
+  label.field { display: block; margin-bottom: 16px; }
+  label.field .lbl { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  label.field .name { font-size: 14px; font-weight: 600; }
+  label.field .q { color: var(--muted); font-size: 12px; cursor: help; }
+  label.field .desc { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
+  input[type="number"], select, input[type="text"] {
+    width: 100%; padding: 10px 12px; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent-3); outline-offset: 1px; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 520px){ .row { grid-template-columns: 1fr; } }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+  .preset-btn {
+    background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 999px; padding: 7px 14px; font-size: 13px; cursor: pointer; transition: .12s;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .preset-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1109; font-weight: 600; }
+
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .toggle-row input { width: auto; }
+  .toggle-row .name { font-size: 14px; font-weight: 600; }
+  .toggle-row .desc { color: var(--muted); font-size: 12.5px; }
+
+  /* Results */
+  .result-hero {
+    text-align: center; padding: 18px; background: var(--panel-2);
+    border: 1px solid var(--line); border-radius: 10px; margin-bottom: 18px;
+  }
+  .result-hero .big { font-size: 40px; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  .result-hero .big small { font-size: 16px; color: var(--muted); font-weight: 600; }
+  .result-hero .cap { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .stat {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px;
+  }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 19px; font-weight: 700; margin-top: 2px; }
+
+  table.breakdown { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.breakdown th, table.breakdown td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  table.breakdown th:first-child, table.breakdown td:first-child { text-align: left; }
+  table.breakdown th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  table.breakdown tr.total td { font-weight: 700; border-top: 2px solid var(--line); border-bottom: none; padding-top: 10px; }
+  table.breakdown td.pos { color: var(--accent-2); }
+
+  .legend { font-size: 12px; color: var(--muted); margin-top: 14px; }
+  .legend code { background: var(--panel-2); padding: 1px 6px; border-radius: 5px; color: var(--ink); }
+
+  .notice { font-size: 12.5px; color: var(--muted); margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .notice b { color: var(--ink); }
+
+  footer { margin-top: 40px; color: var(--muted); font-size: 12px; text-align: center; }
+  a { color: var(--accent-3); }
+
+  details.assumptions { margin-top: 16px; }
+  details.assumptions summary { cursor: pointer; font-size: 13px; color: var(--accent-3); font-weight: 600; }
+  details.assumptions ul { font-size: 12.5px; color: var(--muted); padding-left: 18px; }
+
+  .model-price { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="eyebrow">Revenue &amp; Analytics · Capacity Planning</span>
+    <h1>Anthropic API Usage &amp; Cost Calculator</h1>
+    <p class="sub">
+      Estimate how much your Revenue and Analytics team will spend on the Claude (Anthropic) API.
+      Describe how the team works in plain language — number of people, how often they ask, how big the documents are —
+      and this tool translates that into tokens, monthly cost, and an annual budget. No technical background required.
+    </p>
+
+    <div class="baa">
+      <strong>Hospital / PHI use:</strong> If your workloads touch protected health information (PHI),
+      run them under a signed <strong>Business Associate Agreement (BAA)</strong> with Anthropic and enable
+      <strong>Zero Data Retention (ZDR)</strong> on your account. This calculator estimates <em>usage and spend only</em> —
+      it does not transmit any data and stores nothing. Keep real patient data out of this page; enter only volumes and averages.
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ INPUTS ============ -->
+    <div class="card">
+      <h2>1 · Describe your team's usage</h2>
+      <p class="hint">Start from a preset that looks closest, then adjust the numbers.</p>
+
+      <div class="presets" id="presets">
+        <button class="preset-btn" data-preset="small">Small pilot</button>
+        <button class="preset-btn active" data-preset="dept">Department rollout</button>
+        <button class="preset-btn" data-preset="enterprise">Enterprise / hospital-wide</button>
+      </div>
+
+      <div class="section-label">The team</div>
+      <div class="row">
+        <label class="field">
+          <span class="lbl"><span class="name">People using it</span></span>
+          <input type="number" id="users" min="0" step="1" value="12" />
+          <span class="desc">Analysts / staff who run requests.</span>
+        </label>
+        <label class="field">
+          <span class="lbl"><span class="name">Requests per person / workday</span></span>
+          <input type="number" id="reqsPerUser" min="0" step="1" value="20" />
+          <span class="desc">A "request" = one question, summary, or report.</span>
+        </label>
+      </div>
+      <label class="field">
+        <span class="lbl"><span class="name">Working days per month</span></span>
+        <input type="number" id="workdays" min="1" max="31" step="1" value="21" />
+        <span class="desc">Used to project from daily activity to a monthly total.</span>
+      </label>
+
+      <div class="section-label">Size of each request</div>
+      <label class="field">
+        <span class="lbl">
+          <span class="name">Input size</span>
+          <span class="q" title="1 token ≈ 0.75 words. We convert words → tokens for you.">words in ≈ ? tokens</span>
+        </span>
+        <select id="inputSizePreset">
+          <option value="500">Short question (~500 words)</option>
+          <option value="2000" selected>A few pages / email thread (~2,000 words)</option>
+          <option value="8000">Long report or chart pack (~8,000 words)</option>
+          <option value="30000">Large document / dataset summary (~30,000 words)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="inputWords" min="0" step="100" value="2000" style="margin-top:8px; display:none;" />
+        <span class="desc" id="inputWordsLabel">Average words of context you send (documents, data, the question).</span>
+      </label>
+      <label class="field">
+        <span class="lbl">
+          <span class="name">Output size</span>
+          <span class="q" title="The length of Claude's answer, in words.">answer length</span>
+        </span>
+        <select id="outputSizePreset">
+          <option value="200">Short answer (~200 words)</option>
+          <option value="800" selected>A written summary (~800 words)</option>
+          <option value="2500">A full report / narrative (~2,500 words)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="number" id="outputWords" min="0" step="100" value="800" style="margin-top:8px; display:none;" />
+        <span class="desc" id="outputWordsLabel">Average length of the response Claude writes back.</span>
+      </label>
+
+      <div class="section-label">Model &amp; efficiency</div>
+      <label class="field">
+        <span class="lbl"><span class="name">Claude model</span></span>
+        <select id="model">
+          <option value="opus">Claude Opus 4.8 — most capable (default)</option>
+          <option value="sonnet" selected>Claude Sonnet 4.6 — balanced (best for high volume)</option>
+          <option value="haiku">Claude Haiku 4.5 — fastest &amp; cheapest (simple tasks)</option>
+          <option value="fable">Claude Fable 5 — most powerful (hardest reasoning)</option>
+        </select>
+        <span class="model-price" id="modelPrice"></span>
+      </label>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="caching" checked />
+        <div>
+          <div class="name">Reuse shared context (prompt caching)</div>
+          <div class="desc">If everyone asks against the same documents/policies, the repeated part is ~10× cheaper. Recommended.</div>
+        </div>
+      </div>
+      <label class="field" id="cacheReuseField">
+        <span class="lbl"><span class="name">% of input that is shared / repeated</span></span>
+        <input type="number" id="cacheReusePct" min="0" max="95" step="5" value="60" />
+        <span class="desc">e.g. a standing patient-billing policy or chart template attached to every request.</span>
+      </label>
+
+      <div class="toggle-row">
+        <input type="checkbox" id="batch" />
+        <div>
+          <div class="name">Run non-urgent work in batches</div>
+          <div class="desc">Overnight / scheduled jobs (e.g. nightly report generation) cost <b>50% less</b>. Not for live, interactive use.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RESULTS ============ -->
+    <div class="card">
+      <h2>2 · Projected usage &amp; cost</h2>
+      <p class="hint">Updates live as you type.</p>
+
+      <div class="result-hero">
+        <div class="big" id="monthlyCost">$0<small>/mo</small></div>
+        <div class="cap" id="annualCost">≈ $0 / year</div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="k">Requests / month</div>
+          <div class="v" id="reqsMonth">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">Cost / request</div>
+          <div class="v" id="costPerReq">$0</div>
+        </div>
+        <div class="stat">
+          <div class="k">Tokens / month</div>
+          <div class="v" id="tokensMonth">0</div>
+        </div>
+        <div class="stat">
+          <div class="k">Cost / person / mo</div>
+          <div class="v" id="costPerUser">$0</div>
+        </div>
+      </div>
+
+      <table class="breakdown">
+        <thead>
+          <tr><th>Cost component</th><th>Tokens / mo</th><th>Cost / mo</th></tr>
+        </thead>
+        <tbody id="breakdownBody"></tbody>
+        <tfoot>
+          <tr class="total"><td>Total</td><td id="totalTokens">0</td><td id="totalCost">$0</td></tr>
+        </tfoot>
+      </table>
+
+      <div class="legend">
+        Token rule of thumb: <code>1 token ≈ 0.75 words</code> (so ~1,000 words ≈ 1,333 tokens).
+        Prices are <b>per 1,000,000 tokens</b>.
+      </div>
+
+      <details class="assumptions">
+        <summary>Assumptions &amp; how this is calculated</summary>
+        <ul id="assumptionsList"></ul>
+      </details>
+
+      <div class="notice">
+        <b>Planning estimate, not a bill.</b> Real costs vary with prompt length, retries, and "thinking" depth.
+        Add ~15–25% headroom and confirm against the official
+        <a href="https://platform.claude.com/docs/en/pricing" target="_blank" rel="noopener">Anthropic pricing page</a>
+        and your contracted rates. Pricing snapshot: 2026-06.
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    Built for Revenue &amp; Analytics capacity planning · Estimates only · Run PHI workloads under a BAA with Zero Data Retention.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Pricing per 1,000,000 tokens (USD). Snapshot 2026-06.
+  var MODELS = {
+    opus:   { name: "Claude Opus 4.8",   in: 5,  out: 25 },
+    sonnet: { name: "Claude Sonnet 4.6", in: 3,  out: 15 },
+    haiku:  { name: "Claude Haiku 4.5",  in: 1,  out: 5  },
+    fable:  { name: "Claude Fable 5",    in: 10, out: 50 }
+  };
+
+  var WORDS_PER_TOKEN = 0.75;          // 1 token ≈ 0.75 words
+  var CACHE_WRITE_MULT = 1.25;         // 5-minute cache write premium
+  var CACHE_READ_MULT  = 0.10;         // cache read ≈ 10% of input price
+  var BATCH_MULT       = 0.50;         // batch API = 50% off
+
+  var PRESETS = {
+    small:      { users: 3,  reqsPerUser: 10, workdays: 21, inputSize: "2000",  outputSize: "800",  model: "sonnet", caching: true,  cacheReusePct: 50, batch: false },
+    dept:       { users: 12, reqsPerUser: 20, workdays: 21, inputSize: "2000",  outputSize: "800",  model: "sonnet", caching: true,  cacheReusePct: 60, batch: false },
+    enterprise: { users: 60, reqsPerUser: 30, workdays: 21, inputSize: "8000",  outputSize: "2500", model: "opus",   caching: true,  cacheReusePct: 70, batch: true  }
+  };
+
+  // ---- helpers ----
+  var $ = function (id) { return document.getElementById(id); };
+  function wordsToTokens(w) { return w / WORDS_PER_TOKEN; }
+  function fmtMoney(n) {
+    if (n >= 1000) return "$" + Math.round(n).toLocaleString("en-US");
+    if (n >= 1)    return "$" + n.toFixed(2);
+    if (n > 0)     return "$" + n.toFixed(4);
+    return "$0";
+  }
+  function fmtInt(n) { return Math.round(n).toLocaleString("en-US"); }
+  function fmtTokens(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+    return fmtInt(n);
+  }
+
+  // bind size dropdown <-> custom input
+  function bindSize(selectId, inputId, labelId, baseDesc) {
+    var sel = $(selectId), inp = $(inputId), lbl = $(labelId);
+    function sync() {
+      if (sel.value === "custom") {
+        inp.style.display = "block";
+        lbl.textContent = "Enter the average number of words.";
+      } else {
+        inp.style.display = "none";
+        inp.value = sel.value;
+        lbl.textContent = baseDesc;
+      }
+      compute();
+    }
+    sel.addEventListener("change", sync);
+    inp.addEventListener("input", compute);
+    return sync;
+  }
+
+  function currentInputWords() {
+    var sel = $("inputSizePreset");
+    return sel.value === "custom" ? (+$("inputWords").value || 0) : (+sel.value);
+  }
+  function currentOutputWords() {
+    var sel = $("outputSizePreset");
+    return sel.value === "custom" ? (+$("outputWords").value || 0) : (+sel.value);
+  }
+
+  function compute() {
+    var users    = +$("users").value || 0;
+    var reqsUser = +$("reqsPerUser").value || 0;
+    var workdays = +$("workdays").value || 0;
+    var model    = MODELS[$("model").value];
+    var caching  = $("caching").checked;
+    var reusePct = Math.min(95, Math.max(0, +$("cacheReusePct").value || 0)) / 100;
+    var batch    = $("batch").checked;
+
+    $("cacheReuseField").style.display = caching ? "block" : "none";
+    $("modelPrice").textContent = "Input " + fmtMoney(model.in) + " / output " +
+      fmtMoney(model.out) + " per 1M tokens.";
+
+    var inputTokens  = wordsToTokens(currentInputWords());
+    var outputTokens = wordsToTokens(currentOutputWords());
+    var reqsMonth    = users * reqsUser * workdays;
+
+    // Split input into cached (reused) vs fresh
+    var cachedInput = caching ? inputTokens * reusePct : 0;
+    var freshInput  = inputTokens - cachedInput;
+
+    var batchMult = batch ? BATCH_MULT : 1;
+
+    // Per-request cost (USD). Prices are per 1e6 tokens.
+    var freshInCost  = (freshInput  / 1e6) * model.in  * batchMult;
+    // Cached content: pay write premium once, but for planning across many
+    // requests the steady-state is read price. We model the cheaper read rate
+    // (dominant once cache is warm) plus a small amortized write share.
+    var cacheReadCost  = (cachedInput / 1e6) * model.in * CACHE_READ_MULT * batchMult;
+    var cacheWriteCost = caching && reqsMonth > 0
+      ? ((cachedInput / 1e6) * model.in * CACHE_WRITE_MULT * batchMult) / Math.max(reqsMonth, 1)
+      : 0;
+    var outCost = (outputTokens / 1e6) * model.out * batchMult;
+
+    var perReqInputFresh = freshInCost;
+    var perReqCacheRead  = cacheReadCost;
+    var perReqCacheWrite = cacheWriteCost;
+    var perReqOutput     = outCost;
+    var perReq = perReqInputFresh + perReqCacheRead + perReqCacheWrite + perReqOutput;
+
+    var monthly = perReq * reqsMonth;
+    var annual  = monthly * 12;
+
+    var tokensPerReq = inputTokens + outputTokens;
+    var tokensMonth  = tokensPerReq * reqsMonth;
+
+    // ---- render headline ----
+    $("monthlyCost").innerHTML = fmtMoney(monthly) + '<small>/mo</small>';
+    $("annualCost").textContent = "≈ " + fmtMoney(annual) + " / year";
+    $("reqsMonth").textContent = fmtInt(reqsMonth);
+    $("costPerReq").textContent = fmtMoney(perReq);
+    $("tokensMonth").textContent = fmtTokens(tokensMonth);
+    $("costPerUser").textContent = users > 0 ? fmtMoney(monthly / users) : "$0";
+
+    // ---- breakdown table (monthly) ----
+    var rows = [
+      { label: "Input — new context", tok: freshInput * reqsMonth, cost: freshInCost * reqsMonth }
+    ];
+    if (caching) {
+      rows.push({ label: "Input — cached reads (×0.1)", tok: cachedInput * reqsMonth, cost: cacheReadCost * reqsMonth, pos: true });
+      rows.push({ label: "Input — cache writes (amortized)", tok: 0, cost: cacheWriteCost * reqsMonth });
+    }
+    rows.push({ label: "Output (Claude's answers)", tok: outputTokens * reqsMonth, cost: outCost * reqsMonth });
+
+    var body = $("breakdownBody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + r.label + "</td>" +
+        "<td>" + (r.tok ? fmtTokens(r.tok) : "—") + "</td>" +
+        '<td class="' + (r.pos ? "pos" : "") + '">' + fmtMoney(r.cost) + "</td>";
+      body.appendChild(tr);
+    });
+    $("totalTokens").textContent = fmtTokens(tokensMonth);
+    $("totalCost").textContent = fmtMoney(monthly);
+
+    // ---- assumptions ----
+    var a = [];
+    a.push("1 token ≈ 0.75 words; words you enter are converted to tokens automatically.");
+    a.push("Input ≈ " + fmtInt(inputTokens) + " tokens, output ≈ " + fmtInt(outputTokens) + " tokens per request.");
+    a.push(reqsMonth.toLocaleString() + " requests/month = " + users + " people × " + reqsUser + " requests/day × " + workdays + " workdays.");
+    a.push(model.name + ": " + fmtMoney(model.in) + " input / " + fmtMoney(model.out) + " output per 1M tokens.");
+    if (caching) {
+      a.push((reusePct * 100) + "% of input is shared context, billed at ~10% (cache reads) plus a one-time write premium amortized across the month.");
+    } else {
+      a.push("Prompt caching off — all input billed at full rate. Turning it on can cut input cost sharply for shared documents.");
+    }
+    if (batch) a.push("Batch API applied: 50% discount on all tokens (for non-interactive, scheduled work only).");
+    a.push("Excludes retries, extended 'thinking' tokens, and any tool/web-search usage — add ~15–25% headroom.");
+    var ul = $("assumptionsList");
+    ul.innerHTML = "";
+    a.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+  }
+
+  function applyPreset(key) {
+    var p = PRESETS[key];
+    if (!p) return;
+    $("users").value = p.users;
+    $("reqsPerUser").value = p.reqsPerUser;
+    $("workdays").value = p.workdays;
+    $("inputSizePreset").value = p.inputSize;
+    $("outputSizePreset").value = p.outputSize;
+    $("model").value = p.model;
+    $("caching").checked = p.caching;
+    $("cacheReusePct").value = p.cacheReusePct;
+    $("batch").checked = p.batch;
+    $("inputWords").style.display = "none";
+    $("outputWords").style.display = "none";
+    document.querySelectorAll(".preset-btn").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.preset === key);
+    });
+    compute();
+  }
+
+  // ---- wire up ----
+  var syncIn  = bindSize("inputSizePreset",  "inputWords",  "inputWordsLabel",  "Average words of context you send (documents, data, the question).");
+  var syncOut = bindSize("outputSizePreset", "outputWords", "outputWordsLabel", "Average length of the response Claude writes back.");
+
+  ["users","reqsPerUser","workdays","model","caching","cacheReusePct","batch"].forEach(function (id) {
+    $(id).addEventListener("input", compute);
+    $(id).addEventListener("change", compute);
+  });
+  document.querySelectorAll(".preset-btn").forEach(function (b) {
+    b.addEventListener("click", function () { applyPreset(b.dataset.preset); });
+  });
+
+  syncIn(); syncOut();
+  compute();
+})();
+</script>
+</body>
+</html>
